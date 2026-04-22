@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { CreditCard, Home, PieChart, Settings, TrendingUp, Wallet } from 'lucide-react';
+import AnimatedNumber from '../components/AnimatedNumber';
+import ThemeToggle from '../components/ThemeToggle';
 
 const navItems = [
   { label: '홈', icon: Home },
@@ -8,11 +10,15 @@ const navItems = [
   { label: '설정', icon: Settings },
 ];
 
+const totalSubscription = 189000;
+const annualEquivalent = 640000;
+const weeklySpending = 520000;
+
 const chartData = [
-  { label: '구독', value: 42, amount: '₩ 78,000', color: '#22C55E' },
-  { label: '통신', value: 25, amount: '₩ 46,000', color: '#8EE158' },
-  { label: '카드결제', value: 18, amount: '₩ 33,000', color: '#5BCE52' },
-  { label: '기타', value: 15, amount: '₩ 28,000', color: '#3E8E46' },
+  { label: '구독', value: 42, amountValue: 78000, color: '#22C55E' },
+  { label: '통신', value: 25, amountValue: 46000, color: '#8EE158' },
+  { label: '카드결제', value: 18, amountValue: 33000, color: '#5BCE52' },
+  { label: '기타', value: 15, amountValue: 28000, color: '#3E8E46' },
 ];
 
 export default function HomePage() {
@@ -27,22 +33,29 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-navy text-white">
       <div className="mx-auto max-w-xl px-5 pb-24 pt-6">
-        <header className="mb-5 flex items-center justify-between">
+        <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-slate-400">안녕하세요, SaveAI</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">지출 대시보드</h1>
           </div>
-          <button className="rounded-2xl border border-slate-700 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500">
-            새로고침
-          </button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button className="rounded-2xl border border-slate-700 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500">
+              새로고침
+            </button>
+          </div>
         </header>
 
         <section className="mb-5 rounded-[2rem] border border-white/5 bg-[#151B2F] p-5 shadow-glow">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-slate-400">총 구독료</p>
-              <p className="mt-3 text-4xl font-semibold">₩ 189,000</p>
-              <p className="mt-2 text-sm text-slate-500">연간 환산 시 64만원</p>
+              <p className="mt-3 text-4xl font-semibold">
+                <AnimatedNumber value={totalSubscription} prefix="₩ " />
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                연간 환산 시 <AnimatedNumber value={annualEquivalent} prefix="₩ " />
+              </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/5 text-green">
               <Wallet size={26} />
@@ -90,7 +103,7 @@ export default function HomePage() {
             <div>
               <p className="text-sm text-slate-400">AI 절약 알림</p>
               <p className="mt-2 text-base font-semibold text-white">
-                최근 3개월간 미사용 중인 넷플릭스를 해지하면 월 17,000원이 세이브됩니다.
+                최근 3개월간 미사용 중인 넷플릭스를 해지하면 월 <AnimatedNumber value={17000} suffix="원" />가 세이브됩니다.
               </p>
             </div>
           </div>
@@ -115,7 +128,9 @@ export default function HomePage() {
                   <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-navy shadow-[0_0_0_8px_rgba(15,23,42,0.85)]">
                     <div className="flex h-full flex-col items-center justify-center text-center">
                       <p className="text-sm text-slate-400">구독</p>
-                      <p className="mt-1 text-2xl font-semibold">42%</p>
+                      <p className="mt-1 text-2xl font-semibold">
+                        <AnimatedNumber value={42} suffix="%" />
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -129,7 +144,11 @@ export default function HomePage() {
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                         <span>{item.label}</span>
                       </div>
-                      <span>{item.amount}</span>
+                      <AnimatedNumber
+                        value={item.amountValue}
+                        prefix="₩ "
+                        className="font-semibold"
+                      />
                     </div>
                     <div className="h-3 overflow-hidden rounded-full bg-slate-800">
                       <div className="h-full rounded-full" style={{ width: `${item.value}%`, backgroundColor: item.color }} />

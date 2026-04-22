@@ -1,3 +1,32 @@
+/**
+ * API 모델 예시
+ *
+ * 추천 카드 요청
+ * {
+ *   "userId": "user_123",
+ *   "location": "강남",
+ *   "category": "스타벅스",
+ *   "cards": [
+ *     {
+ *       "id": "shinhan-classic",
+ *       "name": "신한카드 The CLASSIC",
+ *       "bank": "신한카드",
+ *       "benefits": {
+ *         "스타벅스": {
+ *           "type": "percent",
+ *           "label": "카페 30% 할인",
+ *           "value": 30
+ *         }
+ *       },
+ *       "remainingThreshold": {
+ *         "label": "전월 실적까지",
+ *         "amount": 5000
+ *       }
+ *     }
+ *   ]
+ * }
+ */
+
 export type BenefitType = 'percent' | 'fixed' | 'cashback';
 
 export interface CardBenefit {

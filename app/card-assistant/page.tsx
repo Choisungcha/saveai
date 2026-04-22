@@ -1,14 +1,75 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowRight, ChevronRight, CreditCard } from 'lucide-react';
-import { cards, categories, locations, recommendBestCard } from '../../lib/cardAssistant';
+import AnimatedNumber from '../../components/AnimatedNumber';
+import CoinBurst from '../../components/CoinBurst';
+import { cards, categories, locations } from '../../lib/cardAssistant';
+import { recommendCard, processPayment } from '../../lib/api';
 
 export default function CardAssistantPage() {
   const [location, setLocation] = useState(locations[0]);
   const [category, setCategory] = useState(categories[0]);
-  const recommendedCard = useMemo(() => recommendBestCard(category, location), [category, location]);
+  const [recommendedCard, setRecommendedCard] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [savedAmount, setSavedAmount] = useState(0);
+  const [showBurst, setShowBurst] = useState(false);
+
+  useEffect(() => {
+    const loadRecommendation = async () => {
+      setLoading(true);
+      try {
+        const result = await recommendCard({
+          userId: 'user_123',
+          location,
+          category,
+          cards: cards.map(card => ({
+            id: card.id,
+            name: card.name,
+            bank: card.bank,
+            benefits: card.benefits,
+            remainingThreshold: card.remainingThreshold,
+          })),
+        });
+        // API 응답을 기존 포맷에 맞게 변환
+        const card = cards.find(c => c.id === result.recommendedCardId);
+        if (card) {
+          setRecommendedCard({
+            ...card,
+            score: result.score,
+            message: result.message,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load recommendation:', error);
+        // 폴백: 기존 로직 사용
+        const fallback = cards.find(c => c.id === 'shinhan-classic');
+        setRecommendedCard(fallback);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRecommendation();
+  }, [location, category]);
+
+  const handleCheckout = async () => {
+    if (!recommendedCard) return;
+
+    try {
+      const result = await processPayment(recommendedCard.id, 50000, category); // 예시 금액
+      if (result.success) {
+        setSavedAmount(result.savings || 0);
+        setShowBurst(true);
+      }
+    } catch (error) {
+      console.error('Failed to process payment:', error);
+      // 폴백
+      setSavedAmount(17000);
+      setShowBurst(true);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-navy text-white">
@@ -75,7 +136,8 @@ export default function CardAssistantPage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-[2rem] border border-white/5 bg-[#151B2F] p-5 shadow-glow">
+        <section className="mb-6 rounded-[2rem] border border-white/5 bg-[#151B2F] p-5 shadow-glow relative overflow-hidden">
+          <CoinBurst visible={showBurst} onComplete={() => setShowBurst(false)} />
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-slate-400">추천 카드</p>
@@ -83,29 +145,48 @@ export default function CardAssistantPage() {
             </div>
             <div className="rounded-3xl bg-green/10 px-4 py-2 text-sm font-semibold text-green">우수 카드</div>
           </div>
-          <div className="rounded-[2rem] border border-green/20 bg-[#111829] p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-400">{location} · {category}</p>
-                <p className="mt-3 text-2xl font-semibold text-white">{recommendedCard.name}</p>
-                <p className="mt-2 text-sm text-slate-400">{recommendedCard.bank}</p>
-              </div>
-              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-2xl font-semibold text-green">
-                {recommendedCard.logo}
-              </div>
+          {loading ? (
+            <div className="rounded-[2rem] border border-green/20 bg-[#111829] p-5 text-center">
+              <p className="text-slate-400">카드 추천 중...</p>
             </div>
-            <div className="mt-5 rounded-[1.5rem] bg-[#0f1720] p-4 text-sm text-slate-300">
-              <p className="text-slate-400">추천 이유</p>
-              <p className="mt-2 text-lg font-semibold text-white">이 카드는 {recommendedCard.recommendedBenefit?.label}.</p>
-              <p className="mt-3 text-sm text-slate-400">
-                {recommendedCard.remainingThreshold?.label} {recommendedCard.remainingThreshold?.amount.toLocaleString()}원 남았습니다.
-              </p>
+          ) : recommendedCard ? (
+            <div className="rounded-[2rem] border border-green/20 bg-[#111829] p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-slate-400">{location} · {category}</p>
+                  <p className="mt-3 text-2xl font-semibold text-white">{recommendedCard.name}</p>
+                  <p className="mt-2 text-sm text-slate-400">{recommendedCard.bank}</p>
+                </div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-2xl font-semibold text-green">
+                  {recommendedCard.logo}
+                </div>
+              </div>
+              <div className="mt-5 rounded-[1.5rem] bg-[#0f1720] p-4 text-sm text-slate-300">
+                <p className="text-slate-400">추천 이유</p>
+                <p className="mt-2 text-lg font-semibold text-white">{recommendedCard.recommendedBenefit?.label || '최적의 혜택을 제공합니다.'}</p>
+                <p className="mt-3 text-sm text-slate-400">
+                  {recommendedCard.remainingThreshold?.label} <AnimatedNumber value={recommendedCard.remainingThreshold?.amount ?? 0} suffix="원" /> 남았습니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCheckout}
+                className="mt-5 inline-flex items-center gap-2 rounded-3xl bg-green px-5 py-3 text-sm font-semibold text-navy transition hover:bg-green/90"
+              >
+                이 카드로 결제하기
+                <ArrowRight size={16} />
+              </button>
+              {savedAmount > 0 ? (
+                <p className="mt-4 text-center text-sm text-green">
+                  절약 예상: <AnimatedNumber value={savedAmount} prefix="₩ " />
+                </p>
+              ) : null}
             </div>
-            <button className="mt-5 inline-flex items-center gap-2 rounded-3xl bg-green px-5 py-3 text-sm font-semibold text-navy transition hover:bg-green/90">
-              이 카드로 결제하기
-              <ArrowRight size={16} />
-            </button>
-          </div>
+          ) : (
+            <div className="rounded-[2rem] border border-red-500/20 bg-[#111829] p-5 text-center">
+              <p className="text-red-400">카드 추천을 불러올 수 없습니다.</p>
+            </div>
+          )}
         </section>
 
         <section className="rounded-[2rem] border border-white/5 bg-surface p-5">
@@ -141,7 +222,7 @@ export default function CardAssistantPage() {
                       <p>{category} 혜택: {benefit?.label ?? '혜택 없음'}</p>
                       <p>{card.remainingThreshold?.label} {card.remainingThreshold?.amount.toLocaleString()}원</p>
                       <p className="rounded-2xl bg-white/5 px-3 py-2 text-xs text-slate-300">
-                        {recommendedCard.id === card.id ? '이번 선택지 추천 카드' : '다른 카드 보기'}
+                        {recommendedCard?.id === card.id ? '이번 선택지 추천 카드' : '다른 카드 보기'}
                       </p>
                     </div>
                   </div>

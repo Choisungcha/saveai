@@ -1,17 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ArrowRight, ChevronRight, CreditCard } from 'lucide-react';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import CoinBurst from '../../components/CoinBurst';
-import { cards, categories, locations } from '../../lib/cardAssistant';
+import CashbackGraph from '../../components/CashbackGraph';
+import CardComparisonModal from '../../components/CardComparisonModal';
+import { cards, categories, locations, getCashbackEstimate, UserCard, CardBenefit } from '../../lib/cardAssistant';
 import { recommendCard, processPayment } from '../../lib/api';
 
 export default function CardAssistantPage() {
   const [location, setLocation] = useState(locations[0]);
   const [category, setCategory] = useState(categories[0]);
-  const [recommendedCard, setRecommendedCard] = useState<any>(null);
+  const [recommendedCard, setRecommendedCard] = useState<UserCard & { score?: number; message?: string; recommendedBenefit?: CardBenefit | null } | null>(null);
+  const [selectedCard, setSelectedCard] = useState<UserCard | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [savedAmount, setSavedAmount] = useState(0);
   const [showBurst, setShowBurst] = useState(false);
@@ -44,8 +48,8 @@ export default function CardAssistantPage() {
       } catch (error) {
         console.error('Failed to load recommendation:', error);
         // 폴백: 기존 로직 사용
-        const fallback = cards.find(c => c.id === 'shinhan-classic');
-        setRecommendedCard(fallback);
+        const fallback = cards.find((c) => c.id === 'shinhan-classic');
+        setRecommendedCard(fallback ?? null);
       } finally {
         setLoading(false);
       }
@@ -69,6 +73,27 @@ export default function CardAssistantPage() {
       setSavedAmount(17000);
       setShowBurst(true);
     }
+  };
+
+  const cashbackData = useMemo(
+    () =>
+      cards.map((card) => ({
+        id: card.id,
+        label: card.name,
+        value: getCashbackEstimate(card, category),
+        color: card.color,
+        selected: recommendedCard?.id === card.id,
+        onSelect: () => {
+          setSelectedCard(card);
+          setIsModalOpen(true);
+        },
+      })),
+    [category, recommendedCard]
+  );
+
+  const openCardDetail = (card: UserCard) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
   };
 
   return (
@@ -168,14 +193,23 @@ export default function CardAssistantPage() {
                   {recommendedCard.remainingThreshold?.label} <AnimatedNumber value={recommendedCard.remainingThreshold?.amount ?? 0} suffix="원" /> 남았습니다.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleCheckout}
-                className="mt-5 inline-flex items-center gap-2 rounded-3xl bg-green px-5 py-3 text-sm font-semibold text-navy transition hover:bg-green/90"
-              >
-                이 카드로 결제하기
-                <ArrowRight size={16} />
-              </button>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  className="inline-flex items-center justify-center gap-2 rounded-3xl bg-green px-5 py-3 text-sm font-semibold text-navy transition hover:bg-green/90"
+                >
+                  이 카드로 결제하기
+                  <ArrowRight size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => recommendedCard && openCardDetail(recommendedCard)}
+                  className="inline-flex items-center justify-center gap-2 rounded-3xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/20"
+                >
+                  상세 비교 보기
+                </button>
+              </div>
               {savedAmount > 0 ? (
                 <p className="mt-4 text-center text-sm text-green">
                   절약 예상: <AnimatedNumber value={savedAmount} prefix="₩ " />
@@ -187,6 +221,17 @@ export default function CardAssistantPage() {
               <p className="text-red-400">카드 추천을 불러올 수 없습니다.</p>
             </div>
           )}
+        </section>
+
+        <section className="mb-6 rounded-[2rem] border border-white/5 bg-surface p-5">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-400">캐시백 그래프</p>
+              <p className="mt-2 text-xl font-semibold">추천 카드별 예상 혜택</p>
+            </div>
+            <div className="rounded-2xl bg-[#182339] px-3 py-2 text-slate-200">카드를 눌러 상세 보기</div>
+          </div>
+          <CashbackGraph data={cashbackData} />
         </section>
 
         <section className="rounded-[2rem] border border-white/5 bg-surface p-5">
@@ -232,6 +277,13 @@ export default function CardAssistantPage() {
           </div>
         </section>
       </div>
+      <CardComparisonModal
+        open={isModalOpen}
+        card={selectedCard}
+        category={category}
+        savings={savedAmount || (selectedCard ? getCashbackEstimate(selectedCard, category) : 0)}
+        onClose={() => setIsModalOpen(false)}
+      />
     </main>
   );
 }

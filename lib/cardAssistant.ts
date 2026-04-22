@@ -123,6 +123,18 @@ function computeBenefitScore(benefit: CardBenefit, monthlyEstimate: number) {
   return benefit.value / 1000;
 }
 
+export function getCashbackEstimate(card: UserCard, category: string) {
+  const benefit = card.benefits[category];
+  if (!benefit) return 0;
+
+  const spend = card.monthlySpendEstimate;
+  if (benefit.type === 'percent' || benefit.type === 'cashback') {
+    return Math.round(spend * (benefit.value / 100));
+  }
+
+  return Math.round(benefit.value * 4);
+}
+
 export function recommendBestCard(category: string, location: string) {
   return cards
     .map((card) => {

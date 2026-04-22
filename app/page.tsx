@@ -3,11 +3,11 @@ import { CreditCard, Home, PieChart, Settings, TrendingUp, Wallet } from 'lucide
 import AnimatedNumber from '../components/AnimatedNumber';
 import ThemeToggle from '../components/ThemeToggle';
 
-const navItems = [
-  { label: '홈', icon: Home },
-  { label: '지출분석', icon: PieChart },
-  { label: '카드추천', icon: CreditCard },
-  { label: '설정', icon: Settings },
+const navItems: Array<{ label: string; icon: typeof Home; href: string }> = [
+  { label: '홈', icon: Home, href: '/' },
+  { label: '지출분석', icon: PieChart, href: '/expense-analysis' },
+  { label: '카드추천', icon: CreditCard, href: '/card-assistant' },
+  { label: '설정', icon: Settings, href: '/settings' },
 ];
 
 const totalSubscription = 189000;
@@ -107,6 +107,15 @@ export default function HomePage() {
               </p>
             </div>
           </div>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-400">더 자세한 지출 분석을 보고 싶다면?</p>
+            <Link
+              href="/expense-analysis"
+              className="rounded-2xl bg-green px-4 py-2 text-sm font-semibold text-navy transition hover:bg-green/90"
+            >
+              지출분석 보기
+            </Link>
+          </div>
         </section>
 
         <section className="grid gap-4">
@@ -188,10 +197,14 @@ export default function HomePage() {
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button key={item.label} className="inline-flex flex-col items-center gap-1 text-center text-xs text-slate-400 transition hover:text-white">
+              <Link
+                key={item.label}
+                href={item.href as any}
+                className="inline-flex flex-col items-center gap-1 text-center text-xs text-slate-400 transition hover:text-white"
+              >
                 <Icon size={20} />
                 <span>{item.label}</span>
-              </button>
+              </Link>
             );
           })}
         </div>

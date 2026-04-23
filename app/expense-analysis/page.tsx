@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BarChart3, ChartPie, Sparkles, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, BarChart3, ChartPie, Sparkles, Wallet, X } from 'lucide-react';
 import AnimatedNumber from '../../components/AnimatedNumber';
-import { expenseCategories, expenseInsights, getEstimatedSavings, getTotalSpend } from '../../lib/expenseAnalysis';
+import { expenseCategories, expenseInsights, getEstimatedSavings, getTotalSpend, ExpenseInsight } from '../../lib/expenseAnalysis';
 
 export default function ExpenseAnalysisPage() {
   const totalSpend = getTotalSpend();
   const estimatedSavings = getEstimatedSavings();
+  const [selectedInsight, setSelectedInsight] = useState<ExpenseInsight | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleActionClick = (insight: ExpenseInsight) => {
+    setSelectedInsight(insight);
+    setIsModalOpen(true);
+  };
 
   return (
     <main className="min-h-screen bg-navy text-white">
@@ -94,7 +102,10 @@ export default function ExpenseAnalysisPage() {
                 <p className="text-sm leading-7 text-slate-300">{insight.description}</p>
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <p className="text-sm text-slate-400">추천 액션</p>
-                  <button className="inline-flex items-center gap-2 rounded-3xl bg-green px-4 py-2 text-sm font-semibold text-navy transition hover:bg-green/90">
+                  <button 
+                    className="inline-flex items-center gap-2 rounded-3xl bg-green px-4 py-2 text-sm font-semibold text-navy transition hover:bg-green/90"
+                    onClick={() => handleActionClick(insight)}
+                  >
                     {insight.action}
                     <Sparkles size={16} />
                   </button>
@@ -130,6 +141,70 @@ export default function ExpenseAnalysisPage() {
           </div>
         </section>
       </div>
+
+      {/* 혜택 확인 모달 */}
+      {isModalOpen && selectedInsight && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-surface p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">{selectedInsight.title}</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-slate-300">{selectedInsight.description}</p>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="mb-3 text-lg font-semibold text-white">주요 혜택</h4>
+              <ul className="space-y-2">
+                {selectedInsight.benefits?.map((benefit, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-300">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green"></span>
+                    {benefit}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {selectedInsight.alternatives && selectedInsight.alternatives.length > 0 && (
+              <div className="mb-6">
+                <h4 className="mb-3 text-lg font-semibold text-white">대체 옵션</h4>
+                <div className="space-y-3">
+                  {selectedInsight.alternatives.map((alt, index) => (
+                    <div key={index} className="rounded-lg bg-[#111829] p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-white">{alt.name}</span>
+                        <span className="text-sm text-green">월 {alt.savings.toLocaleString()}원 절약</span>
+                      </div>
+                      {alt.price > 0 && (
+                        <p className="mt-1 text-xs text-slate-400">월 {alt.price.toLocaleString()}원</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 rounded-3xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/20"
+              >
+                닫기
+              </button>
+              <button className="flex-1 rounded-3xl bg-green py-3 text-sm font-semibold text-navy transition hover:bg-green/90">
+                적용하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

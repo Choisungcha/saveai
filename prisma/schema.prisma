@@ -1,0 +1,89 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+
+  accounts FinancialAccount[]
+  auditLogs AuditLog[]
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model FinancialAccount {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  provider      String
+  accountId     String
+  accountType   String?
+  balance       Decimal? @db.Decimal(15, 2)
+  encryptedData String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@map("financial_accounts")
+}
+
+model Transaction {
+  id             Int      @id @default(autoincrement())
+  accountId      Int
+  transactionId  String   @unique
+  amount         Decimal  @db.Decimal(15, 2)
+  description    String?
+  transactionDate DateTime
+  category       String?
+  encryptedDetails String?
+  createdAt      DateTime @default(now())
+
+  account FinancialAccount @relation(fields: [accountId], references: [id])
+
+  @@map("transactions")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  action     String
+  resource   String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean  @default(true)
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}

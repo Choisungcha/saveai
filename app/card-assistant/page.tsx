@@ -8,7 +8,7 @@ import CoinBurst from '../../components/CoinBurst';
 import CashbackGraph from '../../components/CashbackGraph';
 import CardComparisonModal from '../../components/CardComparisonModal';
 import { cards, categories, locations, getCashbackEstimate, UserCard, CardBenefit } from '../../lib/cardAssistant';
-import { recommendCard, processPayment } from '../../lib/api';
+import { recommendCard, processPayment, fetchUser } from '../../lib/api';
 
 export default function CardAssistantPage() {
   const [location, setLocation] = useState(locations[0]);
@@ -19,9 +19,28 @@ export default function CardAssistantPage() {
   const [loading, setLoading] = useState(false);
   const [savedAmount, setSavedAmount] = useState(0);
   const [showBurst, setShowBurst] = useState(false);
+  const [isFreeTrialExpired, setIsFreeTrialExpired] = useState(false);
 
   useEffect(() => {
+    const checkFreeTrial = async () => {
+      try {
+        const user = await fetchUser('user_123');
+        if (user) {
+          const userRegistrationDate = new Date(user.createdAt);
+          const threeMonthsLater = new Date(userRegistrationDate);
+          threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+          const now = new Date();
+          setIsFreeTrialExpired(now > threeMonthsLater);
+        }
+      } catch (error) {
+        console.error('Failed to check free trial:', error);
+        setIsFreeTrialExpired(false); // 에러 시 무료로 가정
+      }
+    };
+
     const loadRecommendation = async () => {
+      if (isFreeTrialExpired) return; // 유료 기간이면 추천 로드하지 않음
+
       setLoading(true);
       try {
         const result = await recommendCard({
@@ -55,8 +74,12 @@ export default function CardAssistantPage() {
       }
     };
 
-    loadRecommendation();
-  }, [location, category]);
+    checkFreeTrial().then(() => {
+      if (!isFreeTrialExpired) {
+        loadRecommendation();
+      }
+    });
+  }, [location, category, isFreeTrialExpired]);
 
   const handleCheckout = async () => {
     if (!recommendedCard) return;
@@ -173,6 +196,23 @@ export default function CardAssistantPage() {
           {loading ? (
             <div className="rounded-[2rem] border border-green/20 bg-[#111829] p-5 text-center">
               <p className="text-slate-400">카드 추천 중...</p>
+            </div>
+          ) : isFreeTrialExpired ? (
+            <div className="rounded-[2rem] border border-yellow-500/20 bg-[#111829] p-5 text-center">
+              <div className="mb-4">
+                <p className="text-yellow-400 text-lg font-semibold">무료 체험 기간이 종료되었습니다</p>
+                <p className="text-slate-400 mt-2">카드 추천 서비스를 계속 이용하려면 유료 구독이 필요합니다.</p>
+              </div>
+              <div className="space-y-3">
+                <p className="text-sm text-slate-300">월 990원으로 무제한 카드 추천 및 추가 혜택을 누리세요.</p>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 rounded-3xl bg-green px-5 py-3 text-sm font-semibold text-navy transition hover:bg-green/90"
+                >
+                  유료 구독 시작하기
+                  <ArrowRight size={16} />
+                </button>
+              </div>
             </div>
           ) : recommendedCard ? (
             <div className="rounded-[2rem] border border-green/20 bg-[#111829] p-5">

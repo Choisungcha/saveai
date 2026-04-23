@@ -3,6 +3,37 @@ import { ApiSubscriptionItem, ApiCardRecommendationRequest, ApiCardRecommendatio
 // API 기본 URL (개발 환경에서는 localhost, 프로덕션에서는 실제 도메인)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
+export interface ApiUser {
+  id: number;
+  email: string;
+  name?: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+/**
+ * 사용자 정보를 가져오는 API 호출
+ */
+export async function fetchUser(userId: string): Promise<ApiUser | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    // 폴백: 시뮬레이션 데이터
+    return {
+      id: 123,
+      email: 'user@example.com',
+      name: '테스트 사용자',
+      createdAt: '2024-01-01T00:00:00.000Z', // 3개월 전으로 설정하여 유료 전환 테스트
+      isActive: true,
+    };
+  }
+}
+
 /**
  * 구독 서비스 목록을 가져오는 API 호출
  */
